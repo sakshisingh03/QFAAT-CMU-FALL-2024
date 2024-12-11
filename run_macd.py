@@ -239,11 +239,11 @@ if __name__ == "__main__":
         end_date = configs.config[instrument_type]['end_date']
         tickers = configs.config[instrument_type]['tickers']
 
-        data_obj = utils.getYahooFinanceData()
         interval = '1h' if instrument_type == 'currency' else '1d'
-        data = data_obj.fetch_data(start_date, end_date, tickers,
-                                   interval=interval)
 
+        # Fetch data and check if data is available
+        data = utils.fetch_data_for_instruments(start_date, end_date,
+                                                tickers, interval)
         if purpose == "execute":
             fast_period = 12
             slow_period = 16

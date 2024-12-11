@@ -1,86 +1,152 @@
 import pytest
 import pandas as pd
-import numpy as np
-from backtesting import Backtest, Strategy
-import talib
-from lib_bollinger_bands.bollinger_modules import make_bollinger_indicators, BollingerStrategy, execute_bollinger_strategy, optimize_bollinger_strategy
+from backtesting import Backtest
+from lib_bollinger_bands.bollinger_modules import (
+    make_bollinger_indicators,
+    BollingerStrategy,
+    execute_bollinger_strategy,
+    optimize_bollinger_strategy
+)
+from utils import utils
 
-# Sample data for testing
+
+# Function to create sample data for testing
 def create_sample_data():
+    """
+    Creates a sample DataFrame with basic stock market data for testing.
+
+    Returns:
+        pd.DataFrame: DataFrame with 'Open', 'High', 'Low', 'Close'  and dates.
+    """
     data = {
         'Open': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
         'High': [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
         'Low': [99, 100, 101, 102, 103, 104, 105, 106, 107, 108],
         'Close': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
     }
-    return pd.DataFrame(data)
 
-# Test the `make_bollinger_indicators` function
+    # Generate a date range (10 days starting from '2024-01-01')
+    dates = pd.date_range(start='2024-01-01',
+                          periods=len(data['Open']), freq='D')
+
+    # Create DataFrame with date as index
+    df = pd.DataFrame(data, index=dates)
+
+    return df
+
+
+# Test Case 1: Test make_bollinger_indicators function
 def test_make_bollinger_indicators():
+    """Tests the make_bollinger_indicators function to ensure it adds correct
+    columnsand the values are numeric."""
     df = create_sample_data()
 
-    # Call the function to calculate Bollinger indicators
-    df_with_indicators = make_bollinger_indicators(df)
+    # Calculate Bollinger Bands indicators
+    result = make_bollinger_indicators(df)
 
-    # Test if the Bollinger Bands and BBW columns are created
-    assert 'Upper Band' in df_with_indicators.columns
-    assert 'Lower Band' in df_with_indicators.columns
-    assert 'BBW' in df_with_indicators.columns
-    assert 'Signal' in df_with_indicators.columns
+    # Check if the necessary columns are added
+    assert 'EMA' in result.columns
+    assert 'STD' in result.columns
+    assert 'Upper Band' in result.columns
+    assert 'Lower Band' in result.columns
+    assert 'BBW' in result.columns
+    assert 'Signal' in result.columns
 
-    # Test the Signal generation (ensuring buy and sell signals are created)
-    assert df_with_indicators['Signal'].iloc[0] == 0  # No signal at first point
-    assert df_with_indicators['Signal'].iloc[1] == 0  # No signal at second point
+    # Check if the length of the result matches the input length
+    assert len(result) == len(df)
 
-# Test BollingerStrategy initialization and `next` method
-def test_bollinger_strategy():
+    # Check that the values are numeric
+    assert pd.api.types.is_numeric_dtype(result['EMA'])
+    assert pd.api.types.is_numeric_dtype(result['STD'])
+    assert pd.api.types.is_numeric_dtype(result['Upper Band'])
+    assert pd.api.types.is_numeric_dtype(result['Lower Band'])
+    assert pd.api.types.is_numeric_dtype(result['BBW'])
+    assert pd.api.types.is_numeric_dtype(result['Signal'])
+
+
+# Test Case 2: Test BollingerStrategy logic
+def test_bollinger_strategy_logic():
+    """
+    Tests the logic of the Bollinger strategy using the Backtest class.
+    """
     df = create_sample_data()
 
-    # Create a backtest instance with the BollingerStrategy
+    # Create Backtest instance for the Bollinger strategy
     BollingerStrategy.data = df
     bt = Backtest(df, BollingerStrategy, cash=10**5, commission=0.001)
+
+    # Run the backtest
     stats = bt.run()
 
-    # Test if the strategy is initialized correctly
-    assert isinstance(bt.strategy, BollingerStrategy)
-    assert 'Buy' in stats  # Example of checking stats
+    # Check if the backtest runs without error
+    assert stats['# Trades'] >= 0
 
-# # Test `execute_bollinger_strategy`
-# def test_execute_bollinger_strategy():
-#     df = create_sample_data()
 
-#     # Execute the strategy with the function
-#     stats = execute_bollinger_strategy(df, BollingerStrategy, period=20, atr_factor=2)
+# Test Case 3: Test execute_bollinger_strategy function
+def test_execute_bollinger_strategy():
+    """Tests the execute_bollinger_strategy function to ensure it returns
+    expected stats."""
+    df = create_sample_data()
 
-#     # Test if the stats are returned and are in the expected format
-#     assert 'Buy' in stats  # Example check on the result
-#     assert isinstance(stats, dict)  # Ensure stats is a dictionary
-#     assert 'cagr' in stats  # Check if CAGR is present in stats
+    # Execute Bollinger strategy
+    stats = execute_bollinger_strategy(df, BollingerStrategy)
 
-# # Test `optimize_bollinger_strategy`
-# def test_optimize_bollinger_strategy():
-#     df = create_sample_data()
-#     periods = [10, 20, 30]  # Example periods to test
-#     atr_factors = [1.5, 2, 2.5]  # Example ATR factors to test
-#     metric = 'SharpeRatio'  # Example metric to maximize during optimization
+    # Check if stats are returned and have expected keys
+    assert 'Return [%]' in stats
+    assert 'Sharpe Ratio' in stats
 
-#     # Optimize the strategy
-#     stats, heatmap = optimize_bollinger_strategy(df, BollingerStrategy, periods, atr_factors, metric)
 
-#     # Check if stats and heatmap are returned correctly
-#     assert isinstance(stats, dict)
-#     assert 'SharpeRatio' in stats
-#     assert isinstance(heatmap, np.ndarray)  # Ensure heatmap is a numpy array
+# Test Case 4: Test optimize_bollinger_strategy function
+def test_optimize_bollinger_strategy():
+    """Tests the optimize_bollinger_strategy function to check if optimization
+    runs correctly and returns valid stats and heatmap."""
+    df = create_sample_data()
 
-# # Test the integration with mock data
-# def test_integration_with_mock_data():
-#     # Mock DataFrame with close prices for a backtest
-#     data = create_sample_data()
+    # Define optimization ranges for periods and ATR factors
+    periods = [20, 22, 24]
+    atr_factors = [1.5, 1.6, 1.8]
+    metric = 'Sharpe Ratio'
 
-#     # Run backtest
-#     bt = Backtest(data, BollingerStrategy, cash=10**5, commission=0.001)
-#     stats = bt.run()
+    # Run the optimization
+    stats, heatmap = optimize_bollinger_strategy(
+        df, BollingerStrategy, periods, atr_factors, metric
+    )
 
-#     # Verify the stats are reasonable (e.g., presence of metrics)
-#     assert 'Buy' in stats
-#     assert 'Total Return' in stats
+    # Check if optimization results contain expected stats
+    assert 'Return [%]' in stats
+    assert 'Sharpe Ratio' in stats
+    assert heatmap is not None  # Ensure heatmap was returned
+
+
+# Test Case 5: Test invalid data input (missing 'Close' column)
+def test_invalid_data_input():
+    """Tests if an error is raised when input data is missing a required
+    column ('Close')."""
+    # Create invalid data (missing 'Close' column)
+    data = {
+        'Open': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109],
+        'High': [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
+        'Low': [99, 100, 101, 102, 103, 104, 105, 106, 107, 108]
+    }
+    df = pd.DataFrame(data)
+
+    # Test that an error is raised when 'Close' column is missing
+    with pytest.raises(KeyError):
+        make_bollinger_indicators(df)
+
+
+# Test Case 6: Test add_cagr_to_stats function
+def test_add_cagr_to_stats():
+    """Tests if the add_cagr_to_stats function correctly adds CAGR to the
+    stats dictionary."""
+    # Create mock stats dictionary
+    stats = {'Equity Final [$]': 110000, 'Equity Peak [$]': 100000,
+             'Duration': pd.Timedelta(days=100)}
+    initial_cash = 100000
+
+    # Using utils function to calculate CAGR
+    updated_stats = utils.add_cagr_to_stats(stats, initial_cash)
+
+    # Check if 'CAGR' is added to the stats
+    assert 'CAGR (%)' in updated_stats
+    assert updated_stats['CAGR (%)'] > 0

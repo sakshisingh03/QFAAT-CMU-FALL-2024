@@ -2,136 +2,255 @@ import pandas as pd
 import requests
 import yfinance as yf
 import os
-from datetime import datetime
 
-class getYahooFinanceData:
-    '''class to help fetch data from Yahoo Finance - both currency and equities'''
+
+class GetYahooFinanceData:
+    """
+    A class to fetch data from Yahoo Finance for both currency and equities.
+    """
+
     def __init__(self):
-        print("object initialized")
+        """Initialize the class."""
+        print("Object initialized")
 
     def fetch_data(self, start_date, end_date, currency_list, interval='1h'):
-        # Loop through each ticker and download 1-hour data
-        dict_ = {}
+        """
+        Fetches the data for a list of tickers from Yahoo Finance.
+
+        Parameters:
+        start_date (str): The start date for data fetch (e.g., '2023-01-01').
+        end_date (str): The end date for data fetch (e.g., '2023-12-31').
+        currency_list (list): List of ticker symbols to fetch data for.
+        interval (str): Interval for data ('1h' by default).
+
+        Returns:
+        dict: A dictionary of dataframes, where the keys are ticker symbols.
+        """
+        data_dict = {}
         for ticker in currency_list:
-            data = yf.download(ticker, start=start_date, end=end_date, interval=interval)
-            
-            # Drop certain columns if they exist
-            drop_columns = ['Volume', 'Adj Close']
-            for col in drop_columns:
-                if col in data.columns:
-                    data = data.drop(columns=[col])
-        
-            dict_[ticker] = data
+            try:
+                # Fetching data for each ticker
+                data = yf.download(ticker, start=start_date, end=end_date,
+                                   interval=interval)
 
-            print("data pull complete for: ", ticker)
-    
-        return dict_
-    
+                # Drop unnecessary columns if they exist
+                drop_columns = ['Volume', 'Adj Close']
+                data = data.drop(columns=[col for col in drop_columns if col
+                                          in data.columns])
 
-def get_alphavantage_1hr_data(self, symbol, api_key, output_size="compact"):
+                data_dict[ticker] = data
+                print(f"Data pull complete for: {ticker}")
+
+            except Exception as e:
+                print(f"Error fetching data for {ticker}: {e}")
+
+        return data_dict
+
+    def get_alphavantage_1hr_data(self, symbol, api_key,
+                                  output_size="compact"):
+        """
+        Fetches 1-hour interval intraday stock data from Alpha Vantage.
+
+        Parameters:
+        symbol (str): The stock symbol to fetch data for (e.g., 'AAPL').
+        api_key (str): Your Alpha Vantage API key.
+        output_size (str): The amount of data to retrieve ("compact" or "full")
+
+        Returns:
+        DataFrame: Pandas DataFrame containing the 1-hour interval stocks data.
+        """
+        url = "https://www.alphavantage.co/query"
+        params = {
+            "function": "TIME_SERIES_INTRADAY",
+            "symbol": symbol,
+            "interval": "60min",  # 1-hour interval
+            "apikey": api_key,
+            "outputsize": output_size,
+            "datatype": "json"
+        }
+
+        try:
+            # Make the API request
+            response = requests.get(url, params=params)
+            data = response.json()
+
+            time_series_key = "Time Series (60min)"
+
+            if time_series_key in data:
+                # Convert the data to a DataFrame
+                df = pd.DataFrame.from_dict(data[time_series_key],
+                                            orient="index")
+                df = df.rename(columns={
+                    "1. open": "Open",
+                    "2. high": "High",
+                    "3. low": "Low",
+                    "4. close": "Close",
+                    "5. volume": "Volume"
+                })
+                df.index = pd.to_datetime(df.index)
+                df = df.astype(float)
+                return df
+            else:
+                print(f"Error fetching data for {symbol}:"
+                      f"{data.get('Error Message', 'Unknown error')}")
+                return None
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching data for {symbol}: {e}")
+            return None
+
+
+def add_cagr_to_stats(stats, cash):
     """
-    Fetches 1-hour interval intraday stock data from Alpha Vantage for the specified symbol.
+    Adds Compound Annual Growth Rate (CAGR) to the stats dataframe.
 
     Parameters:
-    symbol (str): The stock symbol to fetch data for (e.g., 'AAPL').
-    api_key (str): Your Alpha Vantage API key.
-    output_size (str): The amount of data to retrieve. "compact" returns the last 100 points,
-                    "full" returns all available data (default is "compact").
+    stats (DataFrame): The stats dataframe containing equity final value.
+    cash (float): The initial cash value.
 
     Returns:
-    DataFrame: A Pandas DataFrame containing the 1-hour interval stock data.
+    DataFrame: The updated stats dataframe with CAGR included.
     """
-    # Base URL for Alpha Vantage API
-    url = "https://www.alphavantage.co/query"
-
-    # Define the API parameters
-    params = {
-        "function": "TIME_SERIES_INTRADAY",
-        "symbol": symbol,
-        "interval": "60min",  # 1-hour interval
-        "apikey": api_key,
-        "outputsize": output_size,
-        "datatype": "json"
-    }
-
-    # Make the API request
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    time_series_key = "Time Series (60min)"
-
-    if time_series_key in data:
-        # Convert the data to a DataFrame
-        df = pd.DataFrame.from_dict(data[time_series_key], orient="index")
-        df = df.rename(columns={
-            "1. open": "Open",
-            "2. high": "High",
-            "3. low": "Low",
-            "4. close": "Close",
-            "5. volume": "Volume"
-        })
-        df.index = pd.to_datetime(df.index)
-        df = df.astype(float)
-        return df
-    else:
-        print("Error fetching data:", data.get("Error Message", "Unknown error"))
-        return None
-        
-    
-def add_cagr_to_stats(stats, cash):
-    days = stats['Duration'].days
-    years = days / 365.25
-    if years > 0:
-        cagr = (stats["Equity Final [$]"] / cash) ** (1 / years) - 1
-        stats['CAGR (%)'] = cagr * 100
-    else:
-        stats['CAGR (%)'] = 0
-    return stats
+    try:
+        days = stats['Duration'].days
+        years = days / 365.25
+        if years > 0:
+            cagr = (stats["Equity Final [$]"] / cash) ** (1 / years) - 1
+            stats['CAGR (%)'] = cagr * 100
+        else:
+            stats['CAGR (%)'] = 0
+        return stats
+    except Exception as e:
+        print(f"Error calculating CAGR: {e}")
+        return stats
 
 
 def combine_execution_results(instrument_type, tickers, results_path):
+    """
+    Combines execution result files for the specified tickers into one CSV.
+
+    Parameters:
+    instrument_type (str): The type of instrument (e.g., 'stocks', 'currency').
+    tickers (list): List of tickers to include.
+    results_path (str): Path where result files are located.
+    """
     combined_results = pd.DataFrame()
-    for filename in os.listdir(results_path):
-        file_details = filename.split('_')
-        file_details = [x.replace('.csv', '') for x in file_details]
-    
-        if file_details[0] == 'execution':
-            ticker = file_details[2]
-            if ticker in tickers:
-                df_results = pd.read_csv(results_path + 'execution_results_' + ticker + '.csv')
-                df_results['ticker'] = ticker
-                combined_results = pd.concat([combined_results, df_results])
-    
-    combined_results.to_csv(results_path + 'combined_execution_results_' + instrument_type + '.csv')
-    
-    
+    try:
+        for filename in os.listdir(results_path):
+            file_details = filename.split('_')
+            file_details = [x.replace('.csv', '') for x in file_details]
+
+            if file_details[0] == 'execution':
+                ticker = file_details[2]
+                if ticker in tickers:
+                    df_results = pd.read_csv(
+                        os.path.join(results_path,
+                                     f'execution_results_{ticker}.csv'))
+                    df_results['ticker'] = ticker
+                    combined_results = pd.concat([combined_results,
+                                                  df_results])
+
+        combined_results.to_csv(
+            os.path.join(results_path, f'combined_execution_results_'
+                         f'{instrument_type}.csv'))
+    except Exception as e:
+        print(f"Error combining execution results: {e}")
+
+
 def combine_optimization_results(instrument_type, tickers, results_path):
+    """
+    Combines optimization result files for the specified tickers into one CSV.
+
+    Parameters:
+    instrument_type (str): The type of instrument (e.g., 'stocks', 'currency').
+    tickers (list): List of tickers to include.
+    results_path (str): Path where result files are located.
+    """
     combined_results = pd.DataFrame()
-    for filename in os.listdir(results_path):
-        file_details = filename.split('_')
-        file_details = [x.replace('.csv', '') for x in file_details]
-    
-        if file_details[0] == 'optimization':
-            ticker = file_details[2]
-            if ticker in tickers:
-                df_results = pd.read_csv(results_path + 'optimization_results_' + ticker + '.csv')
-                df_results['ticker'] = ticker
-                combined_results = pd.concat([combined_results, df_results])
-    
-    combined_results.to_csv(results_path + 'combined_optimization_results_' + instrument_type + '.csv')
-    
+    try:
+        for filename in os.listdir(results_path):
+            file_details = filename.split('_')
+            file_details = [x.replace('.csv', '') for x in file_details]
+
+            if file_details[0] == 'optimization':
+                ticker = file_details[2]
+                if ticker in tickers:
+                    df_results = pd.read_csv(
+                        os.path.join(results_path,
+                                     f'optimization_results_{ticker}.csv'))
+                    df_results['ticker'] = ticker
+                    combined_results = pd.concat([combined_results,
+                                                  df_results])
+
+        combined_results.\
+            to_csv(os.path.join(results_path,
+                                f'combined_optimization_results_'
+                                f'{instrument_type}.csv'))
+    except Exception as e:
+        print(f"Error combining optimization results: {e}")
+
 
 def combine_train_test_results(instrument_type, tickers, results_path):
+    """
+    Combines train test result files for the specified tickers into one CSV.
+
+    Parameters:
+    instrument_type (str): The type of instrument (e.g., 'stocks', 'currency').
+    tickers (list): List of tickers to include.
+    results_path (str): Path where result files are located.
+    """
     combined_results = pd.DataFrame()
-    for filename in os.listdir(results_path):
-        file_details = filename.split('_')
-        file_details = [x.replace('.csv', '') for x in file_details]
-    
-        if file_details[0] == 'train' and file_details[1] == 'test':
-            ticker = file_details[3]
-            if ticker in tickers:
-                df_results = pd.read_csv(results_path + 'train_test_results_' + ticker + '.csv')
-                df_results['ticker'] = ticker
-                combined_results = pd.concat([combined_results, df_results])
-    
-    combined_results.to_csv(results_path + 'combined_train_test_results_' + instrument_type + '.csv')
+    try:
+        for filename in os.listdir(results_path):
+            file_details = filename.split('_')
+            file_details = [x.replace('.csv', '') for x in file_details]
+
+            if file_details[0] == 'train' and file_details[1] == 'test':
+                ticker = file_details[3]
+                if ticker in tickers:
+                    df_results = pd.read_csv(
+                        os.path.join(results_path,
+                                     f'train_test_results_{ticker}.csv'))
+                    df_results['ticker'] = ticker
+                    combined_results = pd.concat([combined_results,
+                                                  df_results])
+
+        combined_results.to_csv(
+            os.path.join(results_path,
+                         f'combined_train_test_results_{instrument_type}.csv'))
+    except Exception as e:
+        print(f"Error combining train-test results: {e}")
+
+
+def fetch_data_for_instruments(start_date, end_date, tickers,
+                               interval):
+    """
+    Fetches data for a list of instruments and checks if data exists for each.
+
+    Parameters:
+    data_obj (object): The data object used to fetch the data.
+    start_date (str): The start date for fetching data.
+    end_date (str): The end date for fetching data.
+    tickers (list): The list of tickers.
+    interval (str): The interval for the data ('1h' for currencies or '1d'
+    for equities).
+
+    Returns:
+    dict: A dictionary with tickers as keys and data as values.
+    """
+    try:
+        data_obj = GetYahooFinanceData()
+        data = data_obj.fetch_data(start_date, end_date, tickers, interval)
+
+        # Check if data exists for each ticker
+        for ticker in tickers:
+            if ticker not in data or data[ticker].empty:
+                raise ValueError(f"No data found for ticker: {ticker}")
+
+        return data
+    except ValueError as ve:
+        print(f"ValueError: {ve}")
+        return {}
+    except Exception as e:
+        print(f"Error fetching data for instruments: {e}")
+        return {}
