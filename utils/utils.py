@@ -94,7 +94,6 @@ def combine_execution_results(instrument_type, tickers, results_path):
     for filename in os.listdir(results_path):
         file_details = filename.split('_')
         file_details = [x.replace('.csv', '') for x in file_details]
-        print(file_details)
     
         if file_details[0] == 'execution':
             ticker = file_details[2]
@@ -111,7 +110,6 @@ def combine_optimization_results(instrument_type, tickers, results_path):
     for filename in os.listdir(results_path):
         file_details = filename.split('_')
         file_details = [x.replace('.csv', '') for x in file_details]
-        print(file_details)
     
         if file_details[0] == 'optimization':
             ticker = file_details[2]
@@ -128,9 +126,8 @@ def combine_train_test_results(instrument_type, tickers, results_path):
     for filename in os.listdir(results_path):
         file_details = filename.split('_')
         file_details = [x.replace('.csv', '') for x in file_details]
-        print(file_details)
     
-        if file_details[0] == 'optimization':
+        if file_details[0] == 'train' and file_details[1] == 'test':
             ticker = file_details[3]
             if ticker in tickers:
                 df_results = pd.read_csv(results_path + 'train_test_results_' + ticker + '.csv')

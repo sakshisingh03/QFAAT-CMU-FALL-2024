@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 from backtesting import Backtest, Strategy
 import os
-import utils
+from utils import utils
 
 def make_keltner_indicators(data, period=20, atr_factor=2):
     """Calculate Keltner Channels for a given dataset."""

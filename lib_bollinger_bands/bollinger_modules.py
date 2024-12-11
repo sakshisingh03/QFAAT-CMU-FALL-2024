@@ -1,6 +1,7 @@
 import pandas as pd
 import talib
-from backtesting import Strategy
+from backtesting import Backtest, Strategy
+from utils import utils
 
 def make_bollinger_indicators(df, period=20, atr_factor=2):
     """

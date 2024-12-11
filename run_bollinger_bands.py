@@ -46,7 +46,7 @@ def execute_bollinger(ticker, data, periods, atr_factors):
 def optimize_bollinger(ticker, data, periods_range, atr_factors_range):
     report = []
     metric = "Sharpe Ratio"
-    stats, heatmap = bm.optimize_bollinger(
+    stats, heatmap = bm.optimize_bollinger_strategy(
         data, periods_range, atr_factors_range, metric
     )
 
@@ -204,7 +204,7 @@ if __name__ == "__main__":
             
         # combine optimization results in one csv
         utils.combine_optimization_results(instrument_type, tickers, 'outputs/bollinger_bands/')
-    elif purpose == "train_test_split":
+    elif purpose == "train_test_optimize":
         periods_range = range(10, 30)
         atr_factors_range = [1.1, 1.5, 2.0]
         for ticker in tickers:
