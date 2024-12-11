@@ -33,7 +33,8 @@ def make_keltner_indicators(data, period=20, atr_factor=2):
         data['Lower'] = data['Middle'] - atr_factor * data['ATR']
         return data
     except Exception as e:
-        raise ValueError(f"Error in calculating Keltner indicators: {e}")
+        print(f"Error in calculating Keltner indicators: {e}")
+        raise
 
 
 class KeltnerStrategy(Strategy):

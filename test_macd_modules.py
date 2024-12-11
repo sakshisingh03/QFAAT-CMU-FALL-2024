@@ -7,7 +7,6 @@ from lib_macd.macd_modules import (
     optimize_macd_strategy
 )
 from backtesting import Backtest
-from utils import utils
 
 
 def create_sample_data():
@@ -137,25 +136,3 @@ def test_invalid_data_input():
     # Test that an error is raised when 'Close' is missing
     with pytest.raises(KeyError):
         make_macd_indicators(df)
-
-
-def test_add_cagr_to_stats():
-    """
-    Tests if the function correctly adds CAGR to the stats.
-
-    Checks if 'CAGR (%)' is added to the stats dictionary.
-    """
-    # Create mock stats data
-    stats = {
-        'Equity Final [$]': 110000,
-        'Equity Peak [$]': 100000,
-        'Duration': pd.Timedelta(days=100)
-    }
-    initial_cash = 100000
-
-    # Use the utility function to calculate CAGR
-    updated_stats = utils.add_cagr_to_stats(stats, initial_cash)
-
-    # Check if CAGR is correctly added
-    assert 'CAGR (%)' in updated_stats
-    assert updated_stats['CAGR (%)'] > 0

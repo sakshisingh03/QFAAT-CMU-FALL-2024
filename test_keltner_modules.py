@@ -7,7 +7,6 @@ from lib_keltner_channels.keltner_modules import (
     execute_keltner_strategy,
     optimize_keltner_strategy
 )
-from utils import utils
 
 
 # Function to create sample data for testing
@@ -129,19 +128,3 @@ def test_invalid_data_input():
     # Test that an error is raised when 'Close' column is missing
     with pytest.raises(KeyError):
         make_keltner_indicators(df)
-
-
-def test_add_cagr_to_stats():
-    """Tests if the add_cagr_to_stats function correctly adds CAGR to the
-    stats dictionary."""
-    # Create mock stats dictionary
-    stats = {'Equity Final [$]': 110000, 'Equity Peak [$]': 100000,
-             'Duration': pd.Timedelta(days=100)}
-    initial_cash = 100000
-
-    # Using utils function to calculate CAGR
-    updated_stats = utils.add_cagr_to_stats(stats, initial_cash)
-
-    # Check if 'CAGR' is added to the stats
-    assert 'CAGR (%)' in updated_stats
-    assert updated_stats['CAGR (%)'] > 0

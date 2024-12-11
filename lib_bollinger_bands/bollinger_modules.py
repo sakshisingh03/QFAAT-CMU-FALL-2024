@@ -53,8 +53,8 @@ def make_bollinger_indicators(df, period=20, atr_factor=2):
 
         return df
     except Exception as e:
-        print(f"Error in make_bollinger_indicators: {e}")
-        return df
+        print(f"Error calculating Bollinger indicators: {e}")
+        raise
 
 
 class BollingerStrategy(Strategy):

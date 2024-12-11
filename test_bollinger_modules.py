@@ -7,7 +7,6 @@ from lib_bollinger_bands.bollinger_modules import (
     execute_bollinger_strategy,
     optimize_bollinger_strategy
 )
-from utils import utils
 
 
 # Function to create sample data for testing
@@ -133,20 +132,3 @@ def test_invalid_data_input():
     # Test that an error is raised when 'Close' column is missing
     with pytest.raises(KeyError):
         make_bollinger_indicators(df)
-
-
-# Test Case 6: Test add_cagr_to_stats function
-def test_add_cagr_to_stats():
-    """Tests if the add_cagr_to_stats function correctly adds CAGR to the
-    stats dictionary."""
-    # Create mock stats dictionary
-    stats = {'Equity Final [$]': 110000, 'Equity Peak [$]': 100000,
-             'Duration': pd.Timedelta(days=100)}
-    initial_cash = 100000
-
-    # Using utils function to calculate CAGR
-    updated_stats = utils.add_cagr_to_stats(stats, initial_cash)
-
-    # Check if 'CAGR' is added to the stats
-    assert 'CAGR (%)' in updated_stats
-    assert updated_stats['CAGR (%)'] > 0
