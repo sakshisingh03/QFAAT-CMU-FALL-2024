@@ -1,0 +1,2 @@
+start_date,end_date,return_strat,max_drawdown,ret_strat_ann,profit_factor,volatility_strat_ann,sharpe_ratio,return_bh,cagr,fast_period,slow_period,signal_period
+2024-04-11 19:00:00+01:00,2024-11-29 22:00:00+00:00,-7.774292223840456,-9.853721997383003,-11.496123235470845,0.4779688562056183,4.011805790194148,0.0,1.446989023634173,-11.963124629651778,47,21,38
