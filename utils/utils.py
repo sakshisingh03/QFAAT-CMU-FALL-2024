@@ -191,7 +191,7 @@ def combine_optimization_results(instrument_type, tickers, results_path):
                                 f'{instrument_type}.csv'))
     except Exception as e:
         print(f"Error combining optimization results: {e}")
-        
+
 
 def combine_wfo_results(instrument_type, tickers, results_path):
     """
@@ -217,10 +217,16 @@ def combine_wfo_results(instrument_type, tickers, results_path):
                     df_results['ticker'] = ticker
                     combined_results = pd.concat([combined_results,
                                                   df_results])
-                    
-        combined_results['start_date'] = combined_results['start_date'].apply(lambda x: datetime.strptime(x[:-6], '%Y-%m-%d %H:%M:%S').date())
-        combined_results['end_date'] = combined_results['end_date'].apply(lambda x: datetime.strptime(x[:-6], '%Y-%m-%d %H:%M:%S').date())
-        combined_results = combined_results.rename(columns={'ret_strat_ann':'ret_ann', 'volatility_strat_ann':'vol_ann'})
+
+        combined_results['start_date'] = combined_results['start_date'].\
+            apply(lambda x: datetime.strptime(x[:-6],
+                                              '%Y-%m-%d %H:%M:%S').date())
+        combined_results['end_date'] = combined_results['end_date'].\
+            apply(lambda x: datetime.strptime(x[:-6],
+                                              '%Y-%m-%d %H:%M:%S').date())
+        combined_results = combined_results.\
+            rename(columns={'ret_strat_ann': 'ret_ann',
+                            'volatility_strat_ann': 'vol_ann'})
 
         combined_results.\
             to_csv(os.path.join(results_path,
@@ -297,67 +303,72 @@ def fetch_data_for_instruments(start_date, end_date, tickers,
 
 
 def calculate_walk_forward_metric(oos_metric, ins_metric):
-  """
-  Calculates a Walk Forward metric (e.g., WFE)
+    """
+    Calculates a Walk Forward metric (e.g., WFE)
 
-  Args:
-      oos_metric: Out-of-sample metric value (float)
-      ins_metric: In-sample metric value (float)
+    Args:
+        oos_metric: Out-of-sample metric value (float)
+        ins_metric: In-sample metric value (float)
 
-  Returns:
-      The calculated Walk Forward metric (float)
-  """
-  if ins_metric != 0:
-    return (oos_metric / ins_metric)
-  else:
-    return np.nan  # Handle division by zero
-      
-      
-def define_walk_forward_iterations(start_date, end_date, in_sample_duration, out_of_sample_duration, num_iterations):
-  """
-  Defines a list of dictionaries representing walk-forward iterations
+    Returns:
+        The calculated Walk Forward metric (float)
+    """
+    if ins_metric != 0:
+        return (oos_metric / ins_metric)
+    else:
+        return np.nan  # Handle division by zero
 
-  Args:
-      start_date: Overall start date (date object)
-      end_date: Overall end date (datetime object)
-      in_sample_duration: Length of the in-sample period (DateOffset object)
-      out_of_sample_duration: Length of the out-of-sample period (DateOffset object)
-      num_iterations: Number of walk-forward iterations (int)
 
-  Returns:
-      A list of dictionaries where each dictionary represents an iteration with
-      in-sample and out-of-sample start and end dates
-  """
-  iterations = []
-  for i in range(num_iterations):
-    in_sample_start = start_date + pd.DateOffset(days=0)
-    in_sample_end = in_sample_start + (i+1)*in_sample_duration - timedelta(hours=1)
-    out_of_sample_start = in_sample_end + timedelta(hours=1)
-    out_of_sample_end = out_of_sample_start + out_of_sample_duration - timedelta(hours=1)
+def define_walk_forward_iterations(start_date, end_date, in_sample_duration,
+                                   out_of_sample_duration, num_iterations):
+    """
+    Defines a list of dictionaries representing walk-forward iterations
 
-    # Make the datetime objects timezone-aware in UTC
-    in_sample_start = pytz.utc.localize(in_sample_start)
-    in_sample_end = pytz.utc.localize(in_sample_end)
-    out_of_sample_start = pytz.utc.localize(out_of_sample_start)
-    out_of_sample_end = pytz.utc.localize(out_of_sample_end)
+    Args:
+        start_date: Overall start date (date object)
+        end_date: Overall end date (datetime object)
+        in_sample_duration: Length of the in-sample period (DateOffset object)
+        out_of_sample_duration: Length of the out-of-sample period (DateOffset
+        object)
+        num_iterations: Number of walk-forward iterations (int)
 
-    iterations.append({
-        'in_sample': [in_sample_start, in_sample_end],
-        'out_of_sample': [out_of_sample_start, out_of_sample_end]
-    })
-  return iterations
+    Returns:
+        A list of dictionaries where each dictionary represents an iteration
+        with in-sample and out-of-sample start and end dates
+    """
+    iterations = []
+    for i in range(num_iterations):
+        in_sample_start = start_date + pd.DateOffset(days=0)
+        in_sample_end = in_sample_start + \
+            (i+1)*in_sample_duration - timedelta(hours=1)
+        out_of_sample_start = in_sample_end + timedelta(hours=1)
+        out_of_sample_end = out_of_sample_start + \
+            out_of_sample_duration - timedelta(hours=1)
+
+        # Make the datetime objects timezone-aware in UTC
+        in_sample_start = pytz.utc.localize(in_sample_start)
+        in_sample_end = pytz.utc.localize(in_sample_end)
+        out_of_sample_start = pytz.utc.localize(out_of_sample_start)
+        out_of_sample_end = pytz.utc.localize(out_of_sample_end)
+
+        iterations.append({
+            'in_sample': [in_sample_start, in_sample_end],
+            'out_of_sample': [out_of_sample_start, out_of_sample_end]
+        })
+    return iterations
+
 
 def localize_data(data):
-  """
-  Localizes the index of a DataFrame to UTC
+    """
+    Localizes the index of a DataFrame to UTC
 
-  Args:
-      data: DataFrame with potentially non-localized index
+    Args:
+        data: DataFrame with potentially non-localized index
 
-  Returns:
-      A DataFrame with its index localized to UTC
-  """
-  if data.index.tz is None:
-    data.index = data.index.tz_localize('UTC')
-  data.index = data.index.tz_convert('UTC')
-  return data
+    Returns:
+        A DataFrame with its index localized to UTC
+    """
+    if data.index.tz is None:
+        data.index = data.index.tz_localize('UTC')
+        data.index = data.index.tz_convert('UTC')
+    return data

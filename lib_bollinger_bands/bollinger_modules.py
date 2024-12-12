@@ -89,7 +89,7 @@ class BollingerStrategy(Strategy):
 
 
 def execute_bollinger_strategy(data, BollingerStrategy, period=20,
-                               atr_factor=2, cash=10**5, commission=0.001,
+                               atr_factor=2, cash=10**5, commission=0.000,
                                exclusive_orders=True):
     """
     Executes the Bollinger Bands strategy on the provided data and returns

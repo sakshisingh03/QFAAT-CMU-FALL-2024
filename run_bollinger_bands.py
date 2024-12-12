@@ -249,19 +249,21 @@ def train_test_split_optimize_bollinger(ticker, data, periods_range,
 def perform_wfo_bollinger(ticker, df_prices, iterations, periods, atr_factors):
     report = []
     metric = 'Sharpe Ratio'
-    
+
     # Iterate over the list of iterations
     for iter in tqdm(iterations):
         # Filter the data to only include the relevant dates
-        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) & (df_prices.index <= iter['in_sample'][1])]
-        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) & (df_prices.index <= iter['out_of_sample'][1])]
+        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) &
+                          (df_prices.index <= iter['in_sample'][1])]
+        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) &
+                           (df_prices.index <= iter['out_of_sample'][1])]
 
         # Calculate the optimal parameters using the in-sample data
         stats_is, heatmap = bm.optimize_bollinger_strategy(
             df_is, bm.BollingerStrategy, periods,
             atr_factors, metric)
 
-        # Run the backtest for the out-of-sample data using the optimal parameters
+        # Run the backtest for the out-of-sample data using the optimal params
         period = stats_is._strategy.period
         atr_factor = stats_is._strategy.atr_factor
 
@@ -270,7 +272,8 @@ def perform_wfo_bollinger(ticker, df_prices, iterations, periods, atr_factors):
             atr_factor=atr_factor
         )
 
-        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'], stats_is['Sharpe Ratio'])
+        wfe = utils.calculate_walk_forward_metric(
+            stats_oos['Sharpe Ratio'], stats_is['Sharpe Ratio'])
 
         # Append relevant metrics to a list of results
         report.append({
@@ -293,8 +296,7 @@ def perform_wfo_bollinger(ticker, df_prices, iterations, periods, atr_factors):
 
     output_file = f'outputs/bollinger_bands/wfo_results_{ticker}.csv'
     df_report.to_csv(output_file, index=False)
-    
-    
+
 
 if __name__ == "__main__":
     """Main script to execute or optimize the Bollinger Bands strategy based on
@@ -319,8 +321,8 @@ if __name__ == "__main__":
 
         # Execute based on the purpose argument
         if purpose == "execute":
-            period = 20
-            atr_factor = 1.1
+            period = 40
+            atr_factor = 1.55
             for ticker in tickers:
                 execute_bollinger(ticker, data[ticker], period, atr_factor)
 
@@ -331,7 +333,7 @@ if __name__ == "__main__":
         elif purpose == "optimize":
             periods_range = np.arange(5, 50, 1).tolist()
             atr_factors_range = np.arange(1, 10, 0.1).tolist()
-            
+
             for ticker in tickers:
                 optimize_bollinger(ticker, data[ticker], periods_range,
                                    atr_factors_range)
@@ -362,15 +364,18 @@ if __name__ == "__main__":
 
             num_iterations = 3
 
-            iterations = utils.define_walk_forward_iterations(start_date, end_date, in_sample_duration, out_of_sample_duration, num_iterations)
+            iterations = utils.define_walk_forward_iterations(
+                start_date, end_date, in_sample_duration,
+                out_of_sample_duration, num_iterations)
 
             for ticker in tickers:
                 data_wfo = utils.localize_data(data[ticker])
-                perform_wfo_bollinger(ticker, data_wfo, iterations, periods, atr_factors)
-                
+                perform_wfo_bollinger(ticker, data_wfo, iterations,
+                                      periods, atr_factors)
+
             # Combine optimization results in one csv
             utils.combine_wfo_results(instrument_type, tickers,
-                                               'outputs/bollinger_bands/')
+                                      'outputs/bollinger_bands/')
 
         else:
             print("No valid purpose to run")
