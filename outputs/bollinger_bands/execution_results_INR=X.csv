@@ -1,0 +1,2 @@
+start_date,end_date,return_strat,max_drawdown,ret_strat_ann,profit_factor,volatility_strat_ann,sharpe_ratio,return_bh,cagr,periods,atr_factors
+2023-01-02 02:00:00+00:00,2024-11-29 18:00:00+00:00,-83.63958530255753,-83.63958530255753,-59.84382565467252,0.01765502684502822,1.9308645690568789,0.0,2.252801182663652,-61.27393218687752,20,1.1

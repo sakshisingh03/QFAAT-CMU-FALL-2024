@@ -47,16 +47,16 @@ pip install -r requirements.txt
 
 
 ├── QFAAT-CMU-FALL-2024/
-|   ├── configs
-|   |  ├── configs.py
+│   ├── configs
+│   │  ├── configs.py
 │   ├── utils
-|   |  ├── utils.py
+│   │  ├── utils.py
 │   ├── lib_bollinger_bands
-|   |  ├── bollinger_modules.py
-|   ├── lib_keltner_channels
-|   |  ├── keltner_modules.py
-|   ├── lib_macd
-|   |  ├── macd_modules.py
+│   │  ├── bollinger_modules.py
+│   ├── lib_keltner_channels
+│   │  ├── keltner_modules.py
+│   ├── lib_macd
+│   │  ├── macd_modules.py
 ├── outputs/
 │   ├── macd
 │   ├── keltner_channels
@@ -71,3 +71,53 @@ pip install -r requirements.txt
 ├── requirements.txt
 └── README.md
 ```
+
+## Key Features
+
+- **Strategy Implementation**:
+  - Keltner Channels
+  - Bollinger Bands
+  - MACD
+- **Asset Classes**:
+  - Equities
+  - Currencies
+- **Backtesting Framework**:
+  - Robust backtesting capabilities to evaluate strategy performance.
+- **Parameter Optimization**:
+  - Exploration of optimal parameter settings for each strategy.
+- **Performance Analysis**:
+  - Detailed performance metrics, including Sharpe ratio, maximum drawdown, and return on investment.
+
+## How to Use
+
+1. **Install Dependencies:**
+```bash
+pip install -r requirements.txt
+```
+2. **Run a Strategy:**
+To run a specific strategy for a particular asset class, use the following command:
+```bash
+python run_<strategy_name>.py <purpose> <instrument_type>
+```
+Replace <strategy_name> with bollinger_bands, keltner_channels, or macd.
+Replace <purpose> with one of the following:
+
+- backtest: Backtest the strategy on historical data.
+- optimize: Optimize the strategy's parameters.
+- analyze: Analyze the strategy's performance.
+- live_trade: Simulate live trading (requires additional setup). Replace <instrument_type> with equity or currency.
+```bash
+python run_bollinger_bands.py backtest equity
+```
+
+**Additional Notes**
+
+- Ensure you have necessary data sources (e.g., Yahoo Finance API) configured.
+- Adjust parameters and configuration files as needed for specific strategies and asset classes.
+- For more advanced usage and customization, refer to the code documentation and configuration files.
+
+**Contributions**
+We welcome contributions to improve the framework and add new strategies. Please feel free to fork the repository and submit pull requests.
+
+**License**
+This project is licensed under the MIT License.
