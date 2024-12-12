@@ -9,7 +9,8 @@ from utils import utils
 from lib_macd import macd_modules as mm
 from configs import configs
 import seaborn as sns
-
+from datetime import datetime
+from tqdm import tqdm
 
 def execute_macd(ticker, data, fast_period, slow_period, signal_period):
     """
@@ -225,6 +226,59 @@ def train_test_split_optimize_macd(ticker, data, fast_periods, slow_periods,
         print(f"Error in train_test_split_optimize_macd for {ticker}: {e}")
 
 
+def perform_wfo_macd(ticker, df_prices, iterations, fast_periods, slow_periods, signal_periods):
+    report = []
+    metric = 'Sharpe Ratio'
+    
+    # Iterate over the list of iterations
+    for iter in tqdm(iterations):
+        # Filter the data to only include the relevant dates
+        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) & (df_prices.index <= iter['in_sample'][1])]
+        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) & (df_prices.index <= iter['out_of_sample'][1])]
+
+        # Calculate the optimal parameters using the in-sample data
+        stats_is, heatmap = mm.optimize_macd_strategy(
+            df_is, mm.MACDStrategy, fast_periods, slow_periods,
+            signal_periods, metric)
+
+        # Run the backtest for the out-of-sample data using the optimal parameters
+        fast_period = stats_is._strategy.fast_period
+        slow_period = stats_is._strategy.slow_period
+        signal_period = stats_is._strategy.signal_period
+
+        stats_oos = mm.execute_macd_strategy(
+            df_oos, mm.MACDStrategy,
+            fast_period=fast_period,
+            slow_period=slow_period,
+            signal_period=signal_period
+        )
+
+        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'], stats_is['Sharpe Ratio'])
+
+        # Append relevant metrics to a list of results
+        report.append({
+            'start_date': stats_oos['Start'],
+            'end_date': stats_oos['End'],
+            'return_strat': stats_oos['Return [%]'],
+            'max_drawdown': stats_oos['Max. Drawdown [%]'],
+            'ret_strat_ann': stats_oos['Return (Ann.) [%]'],
+            'profit_factor': stats_oos['Profit Factor'],
+            'volatility_strat_ann': stats_oos['Volatility (Ann.) [%]'],
+            'is_sharpe_ratio': stats_is['Sharpe Ratio'],
+            'oos_sharpe_ratio': stats_oos['Sharpe Ratio'],
+            'return_bh': stats_oos['Buy & Hold Return [%]'],
+            'WFE': wfe,
+            'fast_period': fast_period,
+            'slow_period': slow_period,
+            'signal_period': signal_period
+        })
+
+    df_report = pd.DataFrame(report)
+
+    output_file = f'outputs/macd/wfo_results_{ticker}.csv'
+    df_report.to_csv(output_file, index=False)
+    
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         logging.error("Usage: run_macd.py <purpose> <instrument_type>")
@@ -282,6 +336,28 @@ if __name__ == "__main__":
             # Combine train test results in one csv
             utils.combine_train_test_results(instrument_type, tickers,
                                              'outputs/macd/')
+        elif purpose == "wfo":
+            fast_periods = range(5, 50)
+            slow_periods = range(5, 50)
+            signal_periods = range(5, 50)
+
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            in_sample_duration = pd.DateOffset(months=6)
+            out_of_sample_duration = pd.DateOffset(months=6)
+
+            num_iterations = 3
+
+            iterations = utils.define_walk_forward_iterations(start_date, end_date, in_sample_duration, out_of_sample_duration, num_iterations)
+
+            for ticker in tickers:
+                data_wfo = utils.localize_data(data[ticker])
+                perform_wfo_macd(ticker, data_wfo, iterations, fast_periods, slow_periods, signal_periods)
+                
+            # Combine optimization results in one csv
+            utils.combine_wfo_results(instrument_type, tickers,
+                                               'outputs/macd/')
         else:
             print("No valid purpose to run")
             sys.exit(1)

@@ -9,6 +9,9 @@ from utils import utils
 from lib_bollinger_bands import bollinger_modules as bm
 from configs import configs
 import seaborn as sns
+from datetime import datetime
+from tqdm import tqdm
+import numpy as np
 
 
 def execute_bollinger(ticker, data, period, atr_factor):
@@ -243,6 +246,56 @@ def train_test_split_optimize_bollinger(ticker, data, periods_range,
         raise
 
 
+def perform_wfo_bollinger(ticker, df_prices, iterations, periods, atr_factors):
+    report = []
+    metric = 'Sharpe Ratio'
+    
+    # Iterate over the list of iterations
+    for iter in tqdm(iterations):
+        # Filter the data to only include the relevant dates
+        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) & (df_prices.index <= iter['in_sample'][1])]
+        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) & (df_prices.index <= iter['out_of_sample'][1])]
+
+        # Calculate the optimal parameters using the in-sample data
+        stats_is, heatmap = bm.optimize_bollinger_strategy(
+            df_is, bm.BollingerStrategy, periods,
+            atr_factors, metric)
+
+        # Run the backtest for the out-of-sample data using the optimal parameters
+        period = stats_is._strategy.period
+        atr_factor = stats_is._strategy.atr_factor
+
+        stats_oos = bm.execute_bollinger_strategy(
+            df_oos, bm.BollingerStrategy, period=period,
+            atr_factor=atr_factor
+        )
+
+        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'], stats_is['Sharpe Ratio'])
+
+        # Append relevant metrics to a list of results
+        report.append({
+            'start_date': stats_oos['Start'],
+            'end_date': stats_oos['End'],
+            'return_strat': stats_oos['Return [%]'],
+            'max_drawdown': stats_oos['Max. Drawdown [%]'],
+            'ret_strat_ann': stats_oos['Return (Ann.) [%]'],
+            'profit_factor': stats_oos['Profit Factor'],
+            'volatility_strat_ann': stats_oos['Volatility (Ann.) [%]'],
+            'is_sharpe_ratio': stats_is['Sharpe Ratio'],
+            'oos_sharpe_ratio': stats_oos['Sharpe Ratio'],
+            'return_bh': stats_oos['Buy & Hold Return [%]'],
+            'WFE': wfe,
+            'period': period,
+            'atr_factor': atr_factor
+        })
+
+    df_report = pd.DataFrame(report)
+
+    output_file = f'outputs/bollinger_bands/wfo_results_{ticker}.csv'
+    df_report.to_csv(output_file, index=False)
+    
+    
+
 if __name__ == "__main__":
     """Main script to execute or optimize the Bollinger Bands strategy based on
     provided arguments"""
@@ -276,8 +329,9 @@ if __name__ == "__main__":
                                             'outputs/bollinger_bands/')
 
         elif purpose == "optimize":
-            periods_range = range(10, 30)
-            atr_factors_range = [1.1, 1.5, 2.0]
+            periods_range = np.arange(5, 50, 1).tolist()
+            atr_factors_range = np.arange(1, 10, 0.1).tolist()
+            
             for ticker in tickers:
                 optimize_bollinger(ticker, data[ticker], periods_range,
                                    atr_factors_range)
@@ -296,6 +350,27 @@ if __name__ == "__main__":
             # Combine train-test results in one CSV
             utils.combine_train_test_results(instrument_type, tickers,
                                              'outputs/bollinger_bands/')
+        elif purpose == "wfo":
+            periods = np.arange(5, 50, 1).tolist()
+            atr_factors = np.arange(1, 10, 0.1).tolist()
+
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+            in_sample_duration = pd.DateOffset(months=6)
+            out_of_sample_duration = pd.DateOffset(months=6)
+
+            num_iterations = 3
+
+            iterations = utils.define_walk_forward_iterations(start_date, end_date, in_sample_duration, out_of_sample_duration, num_iterations)
+
+            for ticker in tickers:
+                data_wfo = utils.localize_data(data[ticker])
+                perform_wfo_bollinger(ticker, data_wfo, iterations, periods, atr_factors)
+                
+            # Combine optimization results in one csv
+            utils.combine_wfo_results(instrument_type, tickers,
+                                               'outputs/bollinger_bands/')
 
         else:
             print("No valid purpose to run")
