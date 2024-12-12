@@ -100,12 +100,17 @@ To run a specific strategy for a particular asset class, use the following comma
 python run_<strategy_name>.py <purpose> <instrument_type>
 ```
 Replace <strategy_name> with bollinger_bands, keltner_channels, or macd.
+
 Replace <purpose> with one of the following:
 
-- backtest: Backtest the strategy on historical data.
-- optimize: Optimize the strategy's parameters.
-- analyze: Analyze the strategy's performance.
-- live_trade: Simulate live trading (requires additional setup). Replace <instrument_type> with equity or currency.
+- execute: Execute the strategy on historical data for given parameters in code.
+- optimize: Optimize the strategy's parameters and report the optimized parameters.
+- train_test_optimize: To slice the data in train and test. Optimize on train data and evaluate on test data based on the parameters obtained on optimization.
+- wfo: Run robustness check using Walk Forward Optimization. 
+
+
+Replace <instrument_type> with equity or currency.
+
 ```bash
 python run_bollinger_bands.py backtest equity
 ```
