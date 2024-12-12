@@ -116,6 +116,10 @@ Example usage:
 python run_bollinger_bands.py execute equity
 ```
 
+The results and plots are saved under the outputs folder, within the folder name of the corresponding strategy. 
+
+To execute the strategy with a parameter of your choice, change the parameters assigned under the line 'if purpose == "execute"'. All the parameters required for the particular strategies are given here. 
+
 **Additional Notes**
 
 - Ensure you have necessary data sources (e.g., Yahoo Finance API) configured.

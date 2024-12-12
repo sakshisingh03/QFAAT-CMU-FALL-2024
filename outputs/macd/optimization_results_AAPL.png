@@ -1,2 +1,0 @@
-start_date,end_date,return_strat,max_drawdown,ret_strat_ann,profit_factor,volatility_strat_ann,sharpe_ratio,return_bh,cagr,fast_period,slow_period,signal_period
-1994-07-01,2020-12-31,12470.629650160045,-51.47415998158693,20.024111702785152,3.3371742953937704,36.19322313842233,0.5532558298608055,57613.63819430159,20.0090116493284,38,23,49

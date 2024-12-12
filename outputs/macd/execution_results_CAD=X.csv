@@ -1,2 +1,0 @@
-start_date,end_date,return_strat,max_drawdown,ret_strat_ann,profit_factor,volatility_strat_ann,sharpe_ratio,return_bh,cagr,fast_period,slow_period,signal_period
-2023-01-02 00:00:00+00:00,2024-11-29 22:00:00+00:00,-47.48492006634726,-47.937486806908545,-27.71916656494282,0.3243578966022667,3.185082379294369,0.0,3.5352196229595045,-28.645724105823554,12,16,6
