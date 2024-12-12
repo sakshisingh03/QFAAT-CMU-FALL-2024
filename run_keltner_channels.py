@@ -137,7 +137,8 @@ def optimize_keltner(ticker, data, periods, atr_factors):
 
 def train_test_split_optimize_keltner(ticker, data, periods, atr_factors):
     """
-    Split data into train and test, optimize Keltner strategy, and save results.
+    Split data into train and test, optimize Keltner strategy, and save
+    results.
 
     Args:
         ticker (str): The ticker symbol for the financial instrument.
@@ -185,7 +186,8 @@ def train_test_split_optimize_keltner(ticker, data, periods, atr_factors):
 
         # Save test results
         df_report = pd.DataFrame(report)
-        output_file = f'outputs/keltner_channels/train_test_results_{ticker}.csv'
+        output_file = \
+            f'outputs/keltner_channels/train_test_results_{ticker}.csv'
         df_report.to_csv(output_file, index=False)
 
         # Plot test equity curve
@@ -196,7 +198,8 @@ def train_test_split_optimize_keltner(ticker, data, periods, atr_factors):
         plt.xlabel('Years')
         plt.ylabel('Equity (Mn$)')
         plt.legend()
-        output_file = f'outputs/keltner_channels/test_equity_curve_{ticker}.png'
+        output_file = \
+            f'outputs/keltner_channels/test_equity_curve_{ticker}.png'
         plt.savefig(output_file, dpi=300, bbox_inches='tight')
 
         # Create heatmap for training optimization
@@ -217,27 +220,27 @@ def train_test_split_optimize_keltner(ticker, data, periods, atr_factors):
 
     except Exception as e:
         logging.\
-            error(f"Error in train_test_split_optimize_keltner for {ticker}: {e}")
+            error(f"Error in train_test_split_optimize for {ticker}: {e}")
         print(f"Error in train_test_split_optimize_keltner for {ticker}: {e}")
-        
+
 
 def perform_wfo_keltner(ticker, df_prices, iterations, periods, atr_factors):
     report = []
     metric = 'Sharpe Ratio'
-    
-    print(iterations)
 
     # Iterate over the list of iterations
     for iter in tqdm(iterations):
         # Filter the data to only include the relevant dates
-        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) & (df_prices.index <= iter['in_sample'][1])]
-        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) & (df_prices.index <= iter['out_of_sample'][1])]
+        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) &
+                          (df_prices.index <= iter['in_sample'][1])]
+        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) &
+                           (df_prices.index <= iter['out_of_sample'][1])]
 
         # Calculate the optimal parameters using the in-sample data
         stats_is, heatmap = km.optimize_keltner_strategy(
             df_is, km.KeltnerStrategy, periods, atr_factors, metric)
 
-        # Run the backtest for the out-of-sample data using the optimal parameters
+        # Run the backtest for the out-of-sample data using the optimal params
         period = stats_is._strategy.period
         atr_factor = stats_is._strategy.atr_factor
 
@@ -245,7 +248,8 @@ def perform_wfo_keltner(ticker, df_prices, iterations, periods, atr_factors):
             df_oos, km.KeltnerStrategy, period=period, atr_factor=atr_factor
         )
 
-        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'], stats_is['Sharpe Ratio'])
+        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'],
+                                                  stats_is['Sharpe Ratio'])
 
         # Append relevant metrics to a list of results
         report.append({
@@ -268,8 +272,8 @@ def perform_wfo_keltner(ticker, df_prices, iterations, periods, atr_factors):
 
     output_file = f'outputs/keltner_channels/wfo_results_{ticker}.csv'
     df_report.to_csv(output_file, index=False)
-    
-    
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         logging.error("Usage: run_keltner.py <purpose> <instrument_type>")
@@ -281,7 +285,7 @@ if __name__ == "__main__":
         start_date = configs.config[instrument_type]['start_date']
         end_date = configs.config[instrument_type]['end_date']
         tickers = configs.config[instrument_type]['tickers']
-        
+
         interval = '1h' if instrument_type == 'currency' else '1d'
 
         # Fetch data and check if data is available
@@ -326,15 +330,18 @@ if __name__ == "__main__":
 
             num_iterations = 3
 
-            iterations = utils.define_walk_forward_iterations(start_date, end_date, in_sample_duration, out_of_sample_duration, num_iterations)
+            iterations = utils.define_walk_forward_iterations(
+                start_date, end_date, in_sample_duration,
+                out_of_sample_duration, num_iterations)
 
             for ticker in tickers:
                 data_wfo = utils.localize_data(data[ticker])
-                perform_wfo_keltner(ticker, data_wfo, iterations, periods, atr_factors)
-                
+                perform_wfo_keltner(ticker, data_wfo, iterations, periods,
+                                    atr_factors)
+
             # Combine optimization results in one csv
             utils.combine_wfo_results(instrument_type, tickers,
-                                               'outputs/keltner_channels/')
+                                      'outputs/keltner_channels/')
         else:
             logging.error("No valid purpose provided")
             sys.exit(1)

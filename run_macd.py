@@ -12,6 +12,7 @@ import seaborn as sns
 from datetime import datetime
 from tqdm import tqdm
 
+
 def execute_macd(ticker, data, fast_period, slow_period, signal_period):
     """
     Execute the MACD strategy and save the results as CSV and plots.
@@ -226,22 +227,25 @@ def train_test_split_optimize_macd(ticker, data, fast_periods, slow_periods,
         print(f"Error in train_test_split_optimize_macd for {ticker}: {e}")
 
 
-def perform_wfo_macd(ticker, df_prices, iterations, fast_periods, slow_periods, signal_periods):
+def perform_wfo_macd(ticker, df_prices, iterations, fast_periods,
+                     slow_periods, signal_periods):
     report = []
     metric = 'Sharpe Ratio'
-    
+
     # Iterate over the list of iterations
     for iter in tqdm(iterations):
         # Filter the data to only include the relevant dates
-        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) & (df_prices.index <= iter['in_sample'][1])]
-        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) & (df_prices.index <= iter['out_of_sample'][1])]
+        df_is = df_prices[(df_prices.index >= iter['in_sample'][0]) &
+                          (df_prices.index <= iter['in_sample'][1])]
+        df_oos = df_prices[(df_prices.index >= iter['out_of_sample'][0]) &
+                           (df_prices.index <= iter['out_of_sample'][1])]
 
         # Calculate the optimal parameters using the in-sample data
         stats_is, heatmap = mm.optimize_macd_strategy(
             df_is, mm.MACDStrategy, fast_periods, slow_periods,
             signal_periods, metric)
 
-        # Run the backtest for the out-of-sample data using the optimal parameters
+        # Run the backtest for the out-of-sample data using the optimal params
         fast_period = stats_is._strategy.fast_period
         slow_period = stats_is._strategy.slow_period
         signal_period = stats_is._strategy.signal_period
@@ -253,7 +257,8 @@ def perform_wfo_macd(ticker, df_prices, iterations, fast_periods, slow_periods, 
             signal_period=signal_period
         )
 
-        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'], stats_is['Sharpe Ratio'])
+        wfe = utils.calculate_walk_forward_metric(stats_oos['Sharpe Ratio'],
+                                                  stats_is['Sharpe Ratio'])
 
         # Append relevant metrics to a list of results
         report.append({
@@ -277,7 +282,7 @@ def perform_wfo_macd(ticker, df_prices, iterations, fast_periods, slow_periods, 
 
     output_file = f'outputs/macd/wfo_results_{ticker}.csv'
     df_report.to_csv(output_file, index=False)
-    
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -349,15 +354,18 @@ if __name__ == "__main__":
 
             num_iterations = 3
 
-            iterations = utils.define_walk_forward_iterations(start_date, end_date, in_sample_duration, out_of_sample_duration, num_iterations)
+            iterations = utils.define_walk_forward_iterations(
+                start_date, end_date, in_sample_duration,
+                out_of_sample_duration, num_iterations)
 
             for ticker in tickers:
                 data_wfo = utils.localize_data(data[ticker])
-                perform_wfo_macd(ticker, data_wfo, iterations, fast_periods, slow_periods, signal_periods)
-                
+                perform_wfo_macd(ticker, data_wfo, iterations, fast_periods,
+                                 slow_periods, signal_periods)
+
             # Combine optimization results in one csv
             utils.combine_wfo_results(instrument_type, tickers,
-                                               'outputs/macd/')
+                                      'outputs/macd/')
         else:
             print("No valid purpose to run")
             sys.exit(1)

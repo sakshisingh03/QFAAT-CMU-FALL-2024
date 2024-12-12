@@ -1,5 +1,8 @@
 import pytest
 import pandas as pd
+import numpy as np
+import pytz
+from datetime import datetime
 from unittest.mock import patch
 from utils.utils import (
     GetYahooFinanceData,
@@ -7,7 +10,10 @@ from utils.utils import (
     combine_execution_results,
     combine_optimization_results,
     combine_train_test_results,
-    fetch_data_for_instruments
+    fetch_data_for_instruments,
+    calculate_walk_forward_metric,
+    define_walk_forward_iterations,
+    localize_data
     )
 
 
@@ -215,3 +221,70 @@ def test_fetch_data_for_instruments_error(mock_fetch_data):
 
     # Ensure empty data is returned on error
     assert data == {}
+
+
+def test_calculate_walk_forward_metric():
+    """
+    Tests the calculate_walk_forward_metric function.
+    """
+    # Test with valid in-sample metric
+    assert calculate_walk_forward_metric(10, 5) == 2.0
+
+    # Test with zero in-sample metric
+    assert np.isnan(calculate_walk_forward_metric(10, 0))
+
+    # Test with negative values
+    assert calculate_walk_forward_metric(-10, -5) == 2.0
+
+    # Test with zero out-of-sample metric
+    assert calculate_walk_forward_metric(0, 5) == 0.0
+
+
+def test_define_walk_forward_iterations():
+    """
+    Tests the define_walk_forward_iterations function.
+    """
+    start_date = datetime(2024, 1, 1)
+    end_date = datetime(2024, 12, 31)
+    in_sample_duration = pd.DateOffset(days=30)
+    out_of_sample_duration = pd.DateOffset(days=15)
+    num_iterations = 3
+
+    iterations = define_walk_forward_iterations(
+        start_date, end_date, in_sample_duration,
+        out_of_sample_duration, num_iterations)
+
+    # Check the number of iterations
+    assert len(iterations) == num_iterations
+
+    # Check the structure of the first iteration
+    first_iteration = iterations[0]
+    assert 'in_sample' in first_iteration and 'out_of_sample' \
+        in first_iteration
+
+    # Check that the dates are localized to UTC
+    assert first_iteration['in_sample'][0].tzinfo == pytz.UTC
+    assert first_iteration['out_of_sample'][0].tzinfo == pytz.UTC
+
+
+def test_localize_data():
+    """
+    Tests the localize_data function.
+    """
+    # Create a DataFrame with a naive datetime index
+    naive_index = pd.date_range(start='2024-01-01', periods=5, freq='D')
+    data = pd.DataFrame({'value': [1, 2, 3, 4, 5]}, index=naive_index)
+
+    # Localize the data
+    localized_data = localize_data(data)
+
+    # Check that the index is localized to UTC
+    assert localized_data.index.tzinfo == pytz.UTC
+
+    # Test with already localized index
+    tz_aware_index = pd.date_range(start='2024-01-01',
+                                   periods=5, freq='D', tz='UTC')
+    data = pd.DataFrame({'value': [1, 2, 3, 4, 5]}, index=tz_aware_index)
+
+    localized_data = localize_data(data)
+    assert localized_data.index.tzinfo == pytz.UTC
