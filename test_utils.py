@@ -2,6 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 import pytz
+import os
 from datetime import datetime
 from unittest.mock import patch
 from utils.utils import (
@@ -13,7 +14,8 @@ from utils.utils import (
     fetch_data_for_instruments,
     calculate_walk_forward_metric,
     define_walk_forward_iterations,
-    localize_data
+    localize_data,
+    combine_wfo_results
     )
 
 
@@ -288,3 +290,54 @@ def test_localize_data():
 
     localized_data = localize_data(data)
     assert localized_data.index.tzinfo == pytz.UTC
+
+
+# Mock data and setup
+@pytest.fixture
+def mock_results_path(tmp_path):
+    """Creates a temporary directory with mock WFO result files."""
+    results_path = tmp_path / "results"
+    results_path.mkdir()
+
+    # Create mock WFO result files
+    tickers = ["AAPL", "MSFT"]
+    for ticker in tickers:
+        file_path = results_path / f"wfo_results_{ticker}.csv"
+        df = pd.DataFrame({
+            "start_date": ["2024-01-01 00:00:00+00:00"],
+            "end_date": ["2024-01-31 00:00:00+00:00"],
+            "ret_strat_ann": [0.1],
+            "volatility_strat_ann": [0.2],
+        })
+        df.to_csv(file_path, index=False)
+
+    return str(results_path)
+
+
+def test_combine_wfo_results(mock_results_path):
+    """Tests the combine_wfo_results function."""
+
+    instrument_type = "stocks"
+    tickers = ["AAPL", "MSFT"]
+    results_path = mock_results_path
+
+    # Call the function
+    combine_wfo_results(instrument_type, tickers, results_path)
+
+    # Check the combined file exists
+    combined_file_path = os.path.\
+        join(results_path, f"combined_wfo_results_{instrument_type}.csv")
+    assert os.path.exists(combined_file_path)
+
+    # Validate the content of the combined file
+    combined_df = pd.read_csv(combined_file_path)
+    assert not combined_df.empty, "Combined results file is empty."
+
+    # Check the columns
+    expected_columns = ["start_date", "end_date", "ret_ann", "vol_ann",
+                        "ticker"]
+    assert all(col in combined_df.columns for col in expected_columns)
+
+    # Check data integrity
+    assert len(combined_df[combined_df["ticker"] == "AAPL"]) == 1
+    assert len(combined_df[combined_df["ticker"] == "MSFT"]) == 1
